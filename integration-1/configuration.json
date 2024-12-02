@@ -1,0 +1,121 @@
+{
+  "secrets": [
+    {
+      "name": "FINGERPRINT_SECRET_API_KEY",
+      "label": "Your secret Fingerprint Server API key",
+      "description": "You can generate a secret key in the Fingerprint Dashboard. Secret keys are used to make server-to-server requests to the Fingerprint Server API."
+    }
+  ],
+  "configuration": [
+    {
+      "name": "REGION",
+      "label": "Which region does your Fingerprint application use?",
+      "description": "When you created your Fingerprint Application, you chose the region in which your data will be stored. Pick the matching region for this configuration option.",
+      "default_value": "Global",
+      "options": [
+        {
+          "value": "Global",
+          "label": "Global (US)"
+        },
+        {
+          "value": "EU",
+          "label": "EU"
+        },
+        {
+          "value": "AP",
+          "label": "Asia"
+        }
+      ]
+    },
+    {
+      "name": "IDENTIFICATION_ERROR",
+      "label": "How should missing or spoofed identification requests be handled?",
+      "description": "Fingerprint data is accessed using the request ID you pass as a part of your login configuration. If this request ID is missing or no matching event is found on Fingerprint Servers (potentially from spoofing), how do you want the login to proceed?",
+      "default_value": "block_login",
+      "options": [
+        {
+          "value": "block_login",
+          "label": "Block the user from logging in"
+        },
+        {
+          "value": "allow_login",
+          "label": "Allow the user to log in (not recommended)"
+        }
+      ]
+    },
+    {
+      "name": "UNRECOGNIZED_VISITORID",
+      "label": "How should unrecognized visitor IDs be handled?",
+      "description": "If a user is logging in from a new device and the visitor ID is not in their list of recognized devices, how do you want the login to proceed?",
+      "default_value": "trigger_mfa",
+      "options": [
+        {
+          "value": "trigger_mfa",
+          "label": "Trigger your pre-configured MFA prompt"
+        },
+        {
+          "value": "allow_login",
+          "label": "Allow the user to log in (not recommended)"
+        }
+      ]
+    },
+    {
+      "name": "MAX_SUSPECT_SCORE",
+      "label": "Suspect Score threshold that should trigger MFA",
+      "description": "The Suspect Score is a weighted representation of all Smart Signals presented as a whole number to help identify suspicious activity. If the Suspect Score is above this threshold, your pre-configured MFA will be triggered. Enter -1 if you do not want to use this feature.",
+      "default_value": "15"
+    },
+    {
+      "name": "BOT_DETECTION",
+      "label": "How should bot activity be handled?",
+      "description": "If a user is detected trying to access your login using a bot or automated tooling, how do you want the login to proceed?",
+      "default_value": "block_login",
+      "options": [
+        {
+          "value": "block_login",
+          "label": "Block the user from logging in"
+        },
+        {
+          "value": "trigger_mfa",
+          "label": "Trigger your pre-configured MFA prompt"
+        },
+        {
+          "value": "allow_login",
+          "label": "Allow the user to log in (not recommended)"
+        }
+      ]
+    },
+    {
+      "name": "VPN_DETECTION",
+      "label": "How should VPN usage be handled?",
+      "description": "If a user is detected trying to access your login while using a VPN, how do you want the login to proceed?",
+      "default_value": "allow_login",
+      "options": [
+        {
+          "value": "block_login",
+          "label": "Block the user from logging in (not recommended)"
+        },
+        {
+          "value": "trigger_mfa",
+          "label": "Trigger your pre-configured MFA prompt"
+        },
+        {
+          "value": "allow_login",
+          "label": "Allow the user to log in"
+        }
+      ]
+    },
+    {
+      "name": "DENIED_MESSAGE",
+      "label": "What message should be sent when a login is denied?",
+      "description": "When Fingerprint denies login for any of the above reasons we will respond with an error message. Enter a generic denial message for failed logins. This message should not reveal any specific details about the reason for the denial.",
+      "default_value": "Error logging in."
+    }
+  ],
+  "dependencies": [
+    {
+      "name": "@fingerprintjs/fingerprintjs-pro-server-api",
+      "version": "5.2.0"
+    }
+  ]
+}

@@ -1,0 +1,23 @@
+{
+  "secrets": [
+    {
+      "name": "API_KEY",
+      "label": "API Key",
+      "description": "API key used to call the risk score service."
+    }
+  ],
+  "configuration": [
+    {
+      "name": "API_BASE_URL",
+      "label": "API Base URL",
+      "description": "Complete (including protocol) base URL for the risk score API.",
+      "default_value": "https://api.example.com/"
+    }
+  ],
+  "dependencies": [
+    {
+      "name": "axios",
+      "version": "0.27.2"
+    }
+  ]
+}

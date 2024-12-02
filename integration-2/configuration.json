@@ -1,0 +1,28 @@
+{
+  "secrets": [],
+  "configuration": [
+    {
+      "name": "DENIED_MESSAGE",
+      "label": "What message should be sent when a login is denied?",
+      "description": "When Fingerprint denies login for any of the above reasons we will respond with an error message. Enter a generic denial message for failed logins. This message should not reveal any specific details about the reason for the denial.",
+      "default_value": "Error logging in."
+    },
+    {
+      "name": "EXPOSE_VISITOR_IDS",
+      "label": "Expose visitor IDs as a custom claim",
+      "description": "When enabled, the list of visitor IDs will be included as a custom claim in the ID token, making it accessible to your app.",
+      "default_value": "false",
+      "options": [
+        {
+          "value": "true",
+          "label": "Yes, include visitor IDs as a custom claim"
+        },
+        {
+          "value": "false",
+          "label": "No, do not include visitor IDs as a custom claim"
+        }
+      ]
+    }
+  ],
+  "dependencies": []
+}

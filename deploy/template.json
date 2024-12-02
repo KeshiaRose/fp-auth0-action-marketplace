@@ -1,0 +1,10 @@
+{
+  "name": "action-post-login-integration-test",
+  "runtime": "node16",
+  "supported_triggers": [
+    {
+      "id": "post-login",
+      "version": "v2"
+    }
+  ]
+}

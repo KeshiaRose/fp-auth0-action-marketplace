@@ -1,0 +1,29 @@
+{
+  "secrets": [
+    {
+      "name": "API_KEY",
+      "label": "API Key",
+      "description": "API key used to call the risk score service."
+    }
+  ],
+  "configuration": [
+    {
+      "name": "API_BASE_URL",
+      "label": "API Base URL",
+      "description": "Complete (including protocol) base URL for the risk score API.",
+      "default_value": "https://api.example.com/"
+    },
+    {
+      "name": "RISK_SCORE_THRESHOLD",
+      "label": "Risk Score Threshold",
+      "description": "Block logins with a risk score greater than this value (range is 1 - 10). Set this to 0 to never block logins.",
+      "default_value": "0"
+    }
+  ],
+  "dependencies": [
+    {
+      "name": "axios",
+      "version": "0.27.2"
+    }
+  ]
+}

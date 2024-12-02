@@ -1,0 +1,17 @@
+{
+  "secrets": [
+    {
+      "name": "CDP_API_KEY",
+      "label": "CDP API Key",
+      "description": "API key used to call the CDP."
+    }
+  ],
+  "configuration": [
+    {
+      "name": "CDP_BASE_URL",
+      "label": "CDP Base URL",
+      "description": "Complete (including protocol) base URL for the CDP API. Defaults to https://api.example.com/"
+    }
+  ],
+  "dependencies": []
+}

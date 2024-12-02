@@ -1,0 +1,23 @@
+{
+  "secrets": [
+    {
+      "name": "TOKEN_SECRET",
+      "label": "Token Secret",
+      "description": "Secret used to sign the redirect token sent when redirecting the user."
+    }
+  ],
+  "configuration": [
+    {
+      "name": "IDV_DOMAIN",
+      "label": "Service Tenant Domain",
+      "description": "The tenant domain for your identity verification service."
+    },
+    {
+      "name": "IDV_EXPIRES_IN",
+      "label": "Verification Expires In Seconds",
+      "description": "How many seconds until a successful identity verification is considered stale? Set this to 0 for no expiration.",
+      "default_value": "0"
+    }
+  ],
+  "dependencies": []
+}
