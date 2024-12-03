@@ -1,6 +1,6 @@
 # Auth0 Fingerprint Integration
 
-> Note: This is Part 1 of a 2-part Action integration. To ensure the integration works correctly, you must install and configure both actions in the correct order. The first action must be the first action in your post-login flow. The actions will not function fully without correct installation. The instructions below cover both actions.
+> Note: This is Part 2 of a 2-part Action integration. To ensure the integration works correctly, you must install and configure both actions in the correct order. The first action must be the first action in your post-login flow. The actions will not function fully without correct installation. The instructions below cover both actions.
 
 This integration enhances your Auth0 login flows with Fingerprint's visitor identification. Fingerprint provides a unique identifier for each browser or device, along with actionable insights to help prevent fraud and improve user experiences.
 
