@@ -29,25 +29,13 @@ exports.onExecutePostLogin = async (event, api) => {
     return allowedValues.includes(value) ? value : defaultValue;
   }
 
+  // Validate configurations
   const VALID_DENIED_MESSAGE = DENIED_MESSAGE || "Error logging in.";
   const VALID_IDENTIFICATION_ERROR = validateConfig(
     IDENTIFICATION_ERROR,
     ["block_login", "allow_login"],
     "block_login"
   );
-
-  // Helper function to handle Action errors
-  function handleActionError(msg) {
-    console.log(msg);
-    api.user.setAppMetadata("com_fingerprint_skip", true);
-    if (VALID_IDENTIFICATION_ERROR === "block_login") {
-      return api.access.deny(VALID_DENIED_MESSAGE);
-    }
-    // Continue login if set to 'allow_login'
-    return null;
-  }
-
-  // Validate configurations
   const VALID_REGION = validateConfig(REGION, ["Global", "EU", "AP"], "Global");
   const VALID_UNRECOGNIZED_VISITORID = validateConfig(
     UNRECOGNIZED_VISITORID,
@@ -66,6 +54,18 @@ exports.onExecutePostLogin = async (event, api) => {
   );
   const VALID_MAX_SUSPECT_SCORE =
     MAX_SUSPECT_SCORE === "-1" ? -1 : parseInt(MAX_SUSPECT_SCORE, 10) || -1;
+
+  // Helper function to handle Action errors
+  function handleActionError(msg) {
+    console.log(msg);
+    api.user.setAppMetadata("com_fingerprint_skip", true);
+    if (VALID_IDENTIFICATION_ERROR === "block_login") {
+      return api.access.deny(VALID_DENIED_MESSAGE);
+    }
+    // Continue login if set to 'allow_login'
+    return null;
+  }
+
   let VALID_AVAILABLE_MFA;
   try {
     const splitList = AVAILABLE_MFA.replace(/ /g, "")
@@ -79,6 +79,10 @@ exports.onExecutePostLogin = async (event, api) => {
   }
   if (VALID_AVAILABLE_MFA.length === 0) {
     handleActionError("No MFA methods configured.");
+    return;
+  }
+  if (!FINGERPRINT_SECRET_API_KEY) {
+    handleActionError("Fingerprint API key is missing.");
     return;
   }
 
