@@ -7,11 +7,9 @@
 exports.onExecutePostLogin = async (event, api) => {
   const { DENIED_MESSAGE, EXPOSE_VISITOR_IDS } = event.configuration;
 
-  const AUTH_ERROR_MESSAGE = DENIED_MESSAGE || "Error logging in.";
-  const SAVE_VISITOR_IDS =
-    (["true", "false"].includes(EXPOSE_VISITOR_IDS)
-      ? EXPOSE_VISITOR_IDS
-      : "false") === "true";
+  const VALID_DENIED_MESSAGE = DENIED_MESSAGE || "Error logging in.";
+  const VALID_EXPOSE_VISITOR_IDS =
+    (["true", "false"].includes(EXPOSE_VISITOR_IDS) ? EXPOSE_VISITOR_IDS : "false") === "true";
 
   // Get variables from the first Action
   const appMetadata = event.user.app_metadata || {};
@@ -26,18 +24,18 @@ exports.onExecutePostLogin = async (event, api) => {
 
   // If no visitorId has been passed there is an error in the Action
   if (!visitorId) {
-    api.access.deny(AUTH_ERROR_MESSAGE);
+    api.access.deny(VALID_DENIED_MESSAGE);
     return;
   }
 
   // Check if the user successfully completed authentication and MFA if was needed
   if (!event.authentication) {
-    api.access.deny(AUTH_ERROR_MESSAGE);
+    api.access.deny(VALID_DENIED_MESSAGE);
     return;
   }
   const mfaSuccess = event.authentication.methods.find((m) => m.name === "mfa");
   if (mfaNeeded && !mfaSuccess) {
-    api.access.deny(AUTH_ERROR_MESSAGE);
+    api.access.deny(VALID_DENIED_MESSAGE);
     return;
   }
 
@@ -50,10 +48,7 @@ exports.onExecutePostLogin = async (event, api) => {
   }
 
   // Optional: Set the visitorId list as a custom claim so it can be accessed from the app
-  if (SAVE_VISITOR_IDS) {
-    api.idToken.setCustomClaim(
-      "https://fingerprint.com/visitorIds",
-      updatedVisitorIds
-    );
+  if (VALID_EXPOSE_VISITOR_IDS) {
+    api.idToken.setCustomClaim("https://fingerprint.com/visitorIds", updatedVisitorIds);
   }
 };

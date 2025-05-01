@@ -24,10 +24,7 @@ To identify your visitors, add the Fingerprint device intelligence client agent 
 Here is a [React](https://github.com/fingerprintjs/fingerprintjs-pro-react) example:
 
 ```jsx
-import {
-  FpjsProvider,
-  useVisitorData,
-} from "@fingerprintjs/fingerprintjs-pro-react";
+import { FpjsProvider, useVisitorData } from "@fingerprintjs/fingerprintjs-pro-react";
 
 const App = () => (
   <FpjsProvider
@@ -69,7 +66,7 @@ Consult the Fingerprint [Quick Start Guide](https://dev.fingerprint.com/docs/qui
 
 ## 2. Send Fingerprint identification results to Auth0
 
-Modify your Auth0 implementation to send the Fingerprint identification results as additional _authorization parameters_.
+Modify your Auth0 implementation to send the Fingerprint identification results as additional *authorization parameters*.
 
 For most JavaScript-based Auth0 SDKs, you can pass the `requestId` and `visitorId` as custom `authorizationParams` into the `loginWithRedirect` function. Here is an example using the [Auth0 React SDK](https://auth0.com/docs/libraries/auth0-react):
 
@@ -158,15 +155,15 @@ In order to prompt for MFA, you will first need to enable it in your Auth0 appli
 1. Select **Add Integration** (at the top of this page).
 1. Read the necessary access requirements, and select **Continue**.
 1. Configure the integration using the following fields:
-   - FINGERPRINT_SECRET_API_KEY: Enter your secret Fingerprint Server API key, which is used for server-to-server requests. This key can be generated in the **[Fingerprint Dashboard](https://dashboard.fingerprint.com/api-keys)**.
-   - REGION: Select the region where your Fingerprint application stores data; options include Global (US), EU, or Asia, with a default of US.
-   - IDENTIFICATION_ERROR: Choose how to handle missing or spoofed request IDs; options include blocking the login, triggering MFA (default), or allowing login (not recommended).
-   - UNRECOGNIZED_VISITORID: Define the behavior for logins from new devices with unrecognized visitor IDs, either by triggering MFA (default) or allowing login.
-   - MAX_SUSPECT_SCORE: Set a threshold for triggering MFA based on the Suspect Score. Set to -1 to disable this feature.
-   - BOT_DETECTION: Decide how to handle logins from detected bots, with options to block login (default), trigger MFA, or allow login.
-   - VPN_DETECTION: Configure how VPN usage is handled, with options to allow login (default), trigger MFA, or block login.
-   - DENIED_MESSAGE: Provide a generic error message for denied logins.
-   - AVAILABLE_MFA: Enter a comma-separated list of MFA methods that are enabled for enrollment. (Ex: otp,push-notification) Refer to [Auth0 documentation](https://auth0.com/docs/customize/actions/explore-triggers/signup-and-login-triggers/login-trigger/post-login-event-object) for a list of available MFA method values.
+   * FINGERPRINT_SECRET_API_KEY: Enter your secret Fingerprint Server API key, which is used for server-to-server requests. This key can be generated in the **[Fingerprint Dashboard](https://dashboard.fingerprint.com/api-keys)**.
+   * REGION: Select the region where your Fingerprint application stores data; options include Global (US), EU, or Asia, with a default of US.
+   * IDENTIFICATION_ERROR: Choose how to handle missing or spoofed request IDs; options include blocking the login, triggering MFA (default), or allowing login (not recommended).
+   * UNRECOGNIZED_VISITORID: Define the behavior for logins from new devices with unrecognized visitor IDs, either by triggering MFA (default) or allowing login.
+   * MAX_SUSPECT_SCORE: Set a threshold for triggering MFA based on the Suspect Score. Set to -1 to disable this feature.
+   * BOT_DETECTION: Decide how to handle logins from detected bots, with options to block login (default), trigger MFA, or allow login.
+   * VPN_DETECTION: Configure how VPN usage is handled, with options to allow login (default), trigger MFA, or block login.
+   * DENIED_MESSAGE: Provide a generic error message for denied logins.
+   * AVAILABLE_MFA: Enter a comma-separated list of MFA methods that are enabled for enrollment. (Ex: otp,push-notification) Refer to [Auth0 documentation](https://auth0.com/docs/customize/actions/explore-triggers/signup-and-login-triggers/login-trigger/post-login-event-object) for a list of available MFA method values.
 1. Add the integration to your Library by selecting **Create**.
 1. In the modal that appears, select the **Add to flow** link.
 1. Drag the Action into the desired location in the flow.
@@ -175,8 +172,8 @@ In order to prompt for MFA, you will first need to enable it in your Auth0 appli
 1. Select **Add Integration** (at the top of this page).
 1. Read the necessary access requirements, and select **Continue**.
 1. Configure the integration using the following fields:
-   - DENIED_MESSAGE: Provide a generic error message for denied logins.
-   - EXPOSE_VISITOR_IDS: Determine whether the list of visitor IDs should be included as a custom claim in the ID token.
+   * DENIED_MESSAGE: Provide a generic error message for denied logins.
+   * EXPOSE_VISITOR_IDS: Determine whether the list of visitor IDs should be included as a custom claim in the ID token.
 1. Add the integration to your Library by selecting **Create**.
 1. In the modal that appears, select the **Add to flow** link.
 1. Drag the Action **directly after** the first Fingerprint action in the flow.

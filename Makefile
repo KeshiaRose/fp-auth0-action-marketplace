@@ -1,5 +1,5 @@
-lint: 
-	docker run --rm -t -v `pwd`/integration/:/data/integration/ auth0/marketplace-integration-tools npm run integration:lint
+# lint: 
+# 	docker run --rm -t -v `pwd`/integration/:/data/integration/ auth0/marketplace-integration-tools npm run integration:lint
 
 lint1: 
 	docker run --rm -t -v `pwd`/integration-1/:/data/integration/ auth0/marketplace-integration-tools npm run integration:lint
@@ -7,8 +7,8 @@ lint1:
 lint2: 
 	docker run --rm -t -v `pwd`/integration-2/:/data/integration/ auth0/marketplace-integration-tools npm run integration:lint
 
-test: 
-	docker run --rm -t -v `pwd`/integration/:/data/integration/ auth0/marketplace-integration-tools npm run test:action
+# test: 
+# 	docker run --rm -t -v `pwd`/integration/:/data/integration/ auth0/marketplace-integration-tools npm run test:action
 
 test1: 
 	docker run --rm -t -v `pwd`/integration-1/:/data/integration/ auth0/marketplace-integration-tools npm run test:action
@@ -16,14 +16,14 @@ test1:
 test2: 
 	docker run --rm -t -v `pwd`/integration-2/:/data/integration/ auth0/marketplace-integration-tools npm run test:action
 
-zip: 
-	zip -r integration-action.zip integration media
+# zip: 
+# 	zip -r integration-action.zip integration media
 
 zip1: 
-	zip -r integration-action.zip integration-1 media
+	zip -r integration-action1.zip integration-1 media
 
 zip2: 
-	zip -r integration-action.zip integration-2 media
+	zip -r integration-action2.zip integration-2 media
 
 deploy_init:
 	docker run --rm -it -v `pwd`/integration/:/data/integration/ -v `pwd`/deploy:/data/deploy auth0/marketplace-integration-tools bash deploy-scripts/init.sh

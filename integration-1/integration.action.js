@@ -11,7 +11,7 @@ const {
  * @param {PostLoginAPI} api - Interface whose methods can be used to change the behavior of the login.
  */
 exports.onExecutePostLogin = async (event, api) => {
-  let {
+  const {
     REGION,
     IDENTIFICATION_ERROR,
     UNRECOGNIZED_VISITORID,
@@ -24,67 +24,69 @@ exports.onExecutePostLogin = async (event, api) => {
 
   const { FINGERPRINT_SECRET_API_KEY } = event.secrets;
 
-  // Helper function to handle Action errors
-  function handleActionError(msg) {
-    console.log(msg);
-    api.user.setAppMetadata("com_fingerprint_skip", true);
-    if (IDENTIFICATION_ERROR === "block_login") {
-      return api.access.deny(DENIED_MESSAGE);
-    }
-    // Continue login if set to 'allow_login'
-    return null;
-  }
-
   // Helper function to validate configuration values
   function validateConfig(value, allowedValues, defaultValue) {
     return allowedValues.includes(value) ? value : defaultValue;
   }
 
-  // Validate configurations
-  REGION = validateConfig(REGION, ["Global", "EU", "AP"], "Global");
-  IDENTIFICATION_ERROR = validateConfig(
+  const VALID_DENIED_MESSAGE = DENIED_MESSAGE || "Error logging in.";
+  const VALID_IDENTIFICATION_ERROR = validateConfig(
     IDENTIFICATION_ERROR,
     ["block_login", "allow_login"],
     "block_login"
   );
-  UNRECOGNIZED_VISITORID = validateConfig(
+
+  // Helper function to handle Action errors
+  function handleActionError(msg) {
+    console.log(msg);
+    api.user.setAppMetadata("com_fingerprint_skip", true);
+    if (VALID_IDENTIFICATION_ERROR === "block_login") {
+      return api.access.deny(VALID_DENIED_MESSAGE);
+    }
+    // Continue login if set to 'allow_login'
+    return null;
+  }
+
+  // Validate configurations
+  const VALID_REGION = validateConfig(REGION, ["Global", "EU", "AP"], "Global");
+  const VALID_UNRECOGNIZED_VISITORID = validateConfig(
     UNRECOGNIZED_VISITORID,
     ["trigger_mfa", "allow_login"],
     "trigger_mfa"
   );
-  BOT_DETECTION = validateConfig(
+  const VALID_BOT_DETECTION = validateConfig(
     BOT_DETECTION,
     ["block_login", "trigger_mfa", "allow_login"],
     "block_login"
   );
-  VPN_DETECTION = validateConfig(
+  const VALID_VPN_DETECTION = validateConfig(
     VPN_DETECTION,
     ["block_login", "trigger_mfa", "allow_login"],
     "allow_login"
   );
-  const MAX_SUSPECT_SCORE_VALUE =
+  const VALID_MAX_SUSPECT_SCORE =
     MAX_SUSPECT_SCORE === "-1" ? -1 : parseInt(MAX_SUSPECT_SCORE, 10) || -1;
-  let ORG_MFA_LIST;
+  let VALID_AVAILABLE_MFA;
   try {
     const splitList = AVAILABLE_MFA.replace(/ /g, "")
       .split(",")
       .filter((mfa) => mfa !== "");
     if (splitList.length === 0) throw new Error();
-    ORG_MFA_LIST = splitList.map((mfa) => ({ type: mfa }));
+    VALID_AVAILABLE_MFA = splitList.map((mfa) => ({ type: mfa }));
   } catch (error) {
     handleActionError("Invalid MFA configuration.");
     return;
   }
-  if (ORG_MFA_LIST.length === 0) {
+  if (VALID_AVAILABLE_MFA.length === 0) {
     handleActionError("No MFA methods configured.");
     return;
   }
-  DENIED_MESSAGE = DENIED_MESSAGE || "Error logging in.";
 
   let mfaNeeded = false;
 
+  // Initialize the Fingerprint Server API client
   const client = new FingerprintJsServerApiClient({
-    region: Region[REGION],
+    region: Region[VALID_REGION],
     apiKey: FINGERPRINT_SECRET_API_KEY,
   });
 
@@ -110,8 +112,7 @@ exports.onExecutePostLogin = async (event, api) => {
     handleActionError("Fingerprint identification event not found");
     return;
   }
-  const visitorId =
-    identificationEvent?.products?.identification?.data?.visitorId;
+  const visitorId = identificationEvent?.products?.identification?.data?.visitorId;
   if (!visitorId) {
     handleActionError("Fingerprint visitor ID not found.");
     return;
@@ -123,11 +124,11 @@ exports.onExecutePostLogin = async (event, api) => {
   // Detect bot actitivity and handle accordingly
   const botDetection = identificationEvent?.products?.botd?.data?.bot?.result;
   if (botDetection !== "notDetected") {
-    if (BOT_DETECTION === "block_login") {
-      api.access.deny(DENIED_MESSAGE);
+    if (VALID_BOT_DETECTION === "block_login") {
+      api.access.deny(VALID_DENIED_MESSAGE);
       return;
     }
-    if (BOT_DETECTION === "trigger_mfa") {
+    if (VALID_BOT_DETECTION === "trigger_mfa") {
       mfaNeeded = true;
     }
     // Continue login if set to 'allow_login'
@@ -136,20 +137,19 @@ exports.onExecutePostLogin = async (event, api) => {
   // Detect VPN usage and handle accordingly
   const vpnDetected = identificationEvent?.products?.vpn?.data?.result;
   if (vpnDetected) {
-    if (VPN_DETECTION === "block_login") {
-      api.access.deny(DENIED_MESSAGE);
+    if (VALID_VPN_DETECTION === "block_login") {
+      api.access.deny(VALID_DENIED_MESSAGE);
       return;
     }
-    if (VPN_DETECTION === "trigger_mfa") {
+    if (VALID_VPN_DETECTION === "trigger_mfa") {
       mfaNeeded = true;
     }
     // Continue login if set to 'allow_login'
   }
 
   // Check if the visitor's Suspect Score is above the threshold
-  const suspectScore =
-    identificationEvent?.products?.identification?.data?.suspect?.score;
-  if (suspectScore > MAX_SUSPECT_SCORE_VALUE && MAX_SUSPECT_SCORE_VALUE >= 0) {
+  const suspectScore = identificationEvent?.products?.identification?.data?.suspect?.score;
+  if (suspectScore > VALID_MAX_SUSPECT_SCORE && VALID_MAX_SUSPECT_SCORE >= 0) {
     mfaNeeded = true;
   }
 
@@ -159,7 +159,7 @@ exports.onExecutePostLogin = async (event, api) => {
     !appMetadata.com_fingerprint_visitorIds ||
     !appMetadata.com_fingerprint_visitorIds.includes(visitorId)
   ) {
-    if (UNRECOGNIZED_VISITORID === "trigger_mfa") {
+    if (VALID_UNRECOGNIZED_VISITORID === "trigger_mfa") {
       mfaNeeded = true;
     }
     // Continue login if set to 'allow_login'
@@ -170,7 +170,7 @@ exports.onExecutePostLogin = async (event, api) => {
   const formattedEnrolledMFAs = enrolledMFAs.map((mfa) => ({ type: mfa.type }));
   if (!enrolledMFAs || enrolledMFAs.length === 0) {
     api.user.setAppMetadata("com_fingerprint_mfaNeeded", true);
-    api.authentication.enrollWithAny(ORG_MFA_LIST);
+    api.authentication.enrollWithAny(VALID_AVAILABLE_MFA);
     return;
   }
 

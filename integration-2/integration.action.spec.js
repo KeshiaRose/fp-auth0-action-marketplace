@@ -62,10 +62,7 @@ describe("Action integration", () => {
 
         await onExecutePostLogin(eventMock, apiMock);
         expect(apiMock.access.deny).not.toHaveBeenCalledWith();
-        expect(apiMock.user.setAppMetadata).not.toHaveBeenCalledWith(
-          "com_fingerprint_skip",
-          true
-        );
+        expect(apiMock.user.setAppMetadata).not.toHaveBeenCalledWith("com_fingerprint_skip", true);
       });
 
       it("uses a default denial message if DENIED_MESSAGE is empty", async () => {
@@ -79,8 +76,7 @@ describe("Action integration", () => {
       it("defaults EXPOSE_VISITOR_IDS to false if invalid value is provided", async () => {
         eventMock.configuration.EXPOSE_VISITOR_IDS = "invalid_value";
         eventMock.user.app_metadata.com_fingerprint_visitorIds = ["visitor123"];
-        eventMock.user.app_metadata.com_fingerprint_currentVisitorId =
-          "visitor123";
+        eventMock.user.app_metadata.com_fingerprint_currentVisitorId = "visitor123";
 
         await onExecutePostLogin(eventMock, apiMock);
         expect(apiMock.idToken.setCustomClaim).not.toHaveBeenCalled();
@@ -92,13 +88,10 @@ describe("Action integration", () => {
         eventMock.user.app_metadata.com_fingerprint_currentVisitorId = null;
 
         await onExecutePostLogin(eventMock, apiMock);
-        expect(apiMock.access.deny).toHaveBeenCalledWith(
-          eventMock.configuration.DENIED_MESSAGE
-        );
-        expect(apiMock.user.setAppMetadata).not.toHaveBeenCalledWith(
-          "com_fingerprint_visitorIds",
-          ["visitor123"]
-        );
+        expect(apiMock.access.deny).toHaveBeenCalledWith(eventMock.configuration.DENIED_MESSAGE);
+        expect(apiMock.user.setAppMetadata).not.toHaveBeenCalledWith("com_fingerprint_visitorIds", [
+          "visitor123",
+        ]);
       });
 
       it("handles missing app_metadata gracefully", async () => {
@@ -115,10 +108,9 @@ describe("Action integration", () => {
 
         await onExecutePostLogin(eventMock, apiMock);
         expect(apiMock.access.deny).not.toHaveBeenCalled();
-        expect(apiMock.user.setAppMetadata).not.toHaveBeenCalledWith(
-          "com_fingerprint_visitorIds",
-          ["visitor123"]
-        );
+        expect(apiMock.user.setAppMetadata).not.toHaveBeenCalledWith("com_fingerprint_visitorIds", [
+          "visitor123",
+        ]);
       });
     });
 
@@ -127,13 +119,10 @@ describe("Action integration", () => {
         eventMock.user.app_metadata.com_fingerprint_mfaNeeded = true;
 
         await onExecutePostLogin(eventMock, apiMock);
-        expect(apiMock.access.deny).toHaveBeenCalledWith(
-          eventMock.configuration.DENIED_MESSAGE
-        );
-        expect(apiMock.user.setAppMetadata).not.toHaveBeenCalledWith(
-          "com_fingerprint_visitorIds",
-          ["visitor123"]
-        );
+        expect(apiMock.access.deny).toHaveBeenCalledWith(eventMock.configuration.DENIED_MESSAGE);
+        expect(apiMock.user.setAppMetadata).not.toHaveBeenCalledWith("com_fingerprint_visitorIds", [
+          "visitor123",
+        ]);
       });
 
       it("allows login and updates visitorId if MFA was completed successfully", async () => {
@@ -141,10 +130,9 @@ describe("Action integration", () => {
         eventMock.authentication.methods.push({ name: "mfa" });
 
         await onExecutePostLogin(eventMock, apiMock);
-        expect(apiMock.user.setAppMetadata).toHaveBeenCalledWith(
-          "com_fingerprint_visitorIds",
-          ["visitor123"]
-        );
+        expect(apiMock.user.setAppMetadata).toHaveBeenCalledWith("com_fingerprint_visitorIds", [
+          "visitor123",
+        ]);
         expect(apiMock.access.deny).not.toHaveBeenCalled();
       });
 
@@ -160,26 +148,24 @@ describe("Action integration", () => {
     describe("Visitor ID updates", () => {
       it("adds a new visitorId to the app metadata if not already present", async () => {
         eventMock.user.app_metadata.com_fingerprint_visitorIds = ["visitor456"];
-        eventMock.user.app_metadata.com_fingerprint_currentVisitorId =
-          "visitor123";
+        eventMock.user.app_metadata.com_fingerprint_currentVisitorId = "visitor123";
 
         await onExecutePostLogin(eventMock, apiMock);
-        expect(apiMock.user.setAppMetadata).toHaveBeenCalledWith(
-          "com_fingerprint_visitorIds",
-          ["visitor456", "visitor123"]
-        );
+        expect(apiMock.user.setAppMetadata).toHaveBeenCalledWith("com_fingerprint_visitorIds", [
+          "visitor456",
+          "visitor123",
+        ]);
       });
 
       it("does not duplicate visitorId if it already exists in app metadata", async () => {
         eventMock.user.app_metadata.com_fingerprint_visitorIds = ["visitor123"];
-        eventMock.user.app_metadata.com_fingerprint_currentVisitorId =
-          "visitor123";
+        eventMock.user.app_metadata.com_fingerprint_currentVisitorId = "visitor123";
 
         await onExecutePostLogin(eventMock, apiMock);
-        expect(apiMock.user.setAppMetadata).not.toHaveBeenCalledWith(
-          "com_fingerprint_visitorIds",
-          ["visitor123", "visitor123"]
-        );
+        expect(apiMock.user.setAppMetadata).not.toHaveBeenCalledWith("com_fingerprint_visitorIds", [
+          "visitor123",
+          "visitor123",
+        ]);
       });
     });
 
