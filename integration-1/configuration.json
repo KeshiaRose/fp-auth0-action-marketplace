@@ -110,12 +110,18 @@
       "label": "What message should be sent when a login is denied?",
       "description": "When Fingerprint denies login for any of the above reasons we will respond with an error message. Enter a generic denial message for failed logins. This message should not reveal any specific details about the reason for the denial.",
       "default_value": "Error logging in."
+    },
+    {
+      "name": "AVAILABLE_MFA",
+      "label": "Which MFA methods are enabled for enrollment?",
+      "description": "Enter a comma-separated list of MFA methods that are available for enrollment when needed. For example: 'otp,push-notification'. Refer to https://auth0.com/docs/customize/actions/explore-triggers/signup-and-login-triggers/login-trigger/post-login-event-object for the list of available MFA method values.",
+      "default_value": "otp"
     }
   ],
   "dependencies": [
     {
       "name": "@fingerprintjs/fingerprintjs-pro-server-api",
-      "version": "5.2.0"
+      "version": "6.4.0"
     }
   ]
 }

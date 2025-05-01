@@ -18,10 +18,22 @@ exports.onExecutePostLogin = async (event, api) => {
     MAX_SUSPECT_SCORE,
     BOT_DETECTION,
     VPN_DETECTION,
+    AVAILABLE_MFA,
     DENIED_MESSAGE,
   } = event.configuration;
 
   const { FINGERPRINT_SECRET_API_KEY } = event.secrets;
+
+  // Helper function to handle Action errors
+  function handleActionError(msg) {
+    console.log(msg);
+    api.user.setAppMetadata("com_fingerprint_skip", true);
+    if (IDENTIFICATION_ERROR === "block_login") {
+      return api.access.deny(DENIED_MESSAGE);
+    }
+    // Continue login if set to 'allow_login'
+    return null;
+  }
 
   // Helper function to validate configuration values
   function validateConfig(value, allowedValues, defaultValue) {
@@ -50,21 +62,26 @@ exports.onExecutePostLogin = async (event, api) => {
     ["block_login", "trigger_mfa", "allow_login"],
     "allow_login"
   );
-  MAX_SUSPECT_SCORE = MAX_SUSPECT_SCORE === "-1" ? -1 : parseInt(MAX_SUSPECT_SCORE, 10) || -1;
+  const MAX_SUSPECT_SCORE_VALUE =
+    MAX_SUSPECT_SCORE === "-1" ? -1 : parseInt(MAX_SUSPECT_SCORE, 10) || -1;
+  let ORG_MFA_LIST;
+  try {
+    const splitList = AVAILABLE_MFA.replace(/ /g, "")
+      .split(",")
+      .filter((mfa) => mfa !== "");
+    if (splitList.length === 0) throw new Error();
+    ORG_MFA_LIST = splitList.map((mfa) => ({ type: mfa }));
+  } catch (error) {
+    handleActionError("Invalid MFA configuration.");
+    return;
+  }
+  if (ORG_MFA_LIST.length === 0) {
+    handleActionError("No MFA methods configured.");
+    return;
+  }
   DENIED_MESSAGE = DENIED_MESSAGE || "Error logging in.";
 
   let mfaNeeded = false;
-
-  // Helper function to handle Fingerprint errors
-  function handleFpError(msg) {
-    console.log(msg);
-    api.user.setAppMetadata("fp_skip", true);
-    if (IDENTIFICATION_ERROR === "block_login") {
-      return api.access.deny(DENIED_MESSAGE);
-    }
-    // Continue login if set to 'allow_login'
-    return null;
-  }
 
   const client = new FingerprintJsServerApiClient({
     region: Region[REGION],
@@ -74,7 +91,7 @@ exports.onExecutePostLogin = async (event, api) => {
   // Extract the requestId from the query parameters
   const { requestId } = event.request.query;
   if (!requestId) {
-    handleFpError("Fingerprint request ID missing.");
+    handleActionError("Fingerprint request ID missing.");
     return;
   }
 
@@ -90,17 +107,18 @@ exports.onExecutePostLogin = async (event, api) => {
     } else {
       console.log("Unknown FP error: ", error);
     }
-    handleFpError("Fingerprint identification event not found");
+    handleActionError("Fingerprint identification event not found");
     return;
   }
-  const visitorId = identificationEvent?.products?.identification?.data?.visitorId;
+  const visitorId =
+    identificationEvent?.products?.identification?.data?.visitorId;
   if (!visitorId) {
-    handleFpError("Fingerprint visitor ID not found.");
+    handleActionError("Fingerprint visitor ID not found.");
     return;
   }
 
   // Save the current visitorId within the app metadata
-  api.user.setAppMetadata("fp_currentVisitorId", visitorId);
+  api.user.setAppMetadata("com_fingerprint_currentVisitorId", visitorId);
 
   // Detect bot actitivity and handle accordingly
   const botDetection = identificationEvent?.products?.botd?.data?.bot?.result;
@@ -129,14 +147,18 @@ exports.onExecutePostLogin = async (event, api) => {
   }
 
   // Check if the visitor's Suspect Score is above the threshold
-  const suspectScore = identificationEvent?.products?.identification?.data?.suspect?.score;
-  if (suspectScore > MAX_SUSPECT_SCORE && MAX_SUSPECT_SCORE >= 0) {
+  const suspectScore =
+    identificationEvent?.products?.identification?.data?.suspect?.score;
+  if (suspectScore > MAX_SUSPECT_SCORE_VALUE && MAX_SUSPECT_SCORE_VALUE >= 0) {
     mfaNeeded = true;
   }
 
   // Check if the visitorId is recognized
   const appMetadata = event.user.app_metadata || {};
-  if (!appMetadata.fp_visitorIds || !appMetadata.fp_visitorIds.includes(visitorId)) {
+  if (
+    !appMetadata.com_fingerprint_visitorIds ||
+    !appMetadata.com_fingerprint_visitorIds.includes(visitorId)
+  ) {
     if (UNRECOGNIZED_VISITORID === "trigger_mfa") {
       mfaNeeded = true;
     }
@@ -144,31 +166,17 @@ exports.onExecutePostLogin = async (event, api) => {
   }
 
   // If not enrolled in MFA, enroll in MFA
-  const enrolledMFAs = event?.user?.multifactor?.length;
-  if (!enrolledMFAs || enrolledMFAs === 0) {
-    api.user.setAppMetadata("fp_mfaNeeded", true);
-    api.authentication.enrollWithAny([
-      { type: "otp" },
-      { type: "recovery-code" },
-      { type: "push-notification" },
-      { type: "phone" },
-      { type: "webauthn-platform" },
-      { type: "webauthn-roaming" },
-    ]);
+  const enrolledMFAs = event.user?.enrolledFactors || [];
+  const formattedEnrolledMFAs = enrolledMFAs.map((mfa) => ({ type: mfa.type }));
+  if (!enrolledMFAs || enrolledMFAs.length === 0) {
+    api.user.setAppMetadata("com_fingerprint_mfaNeeded", true);
+    api.authentication.enrollWithAny(ORG_MFA_LIST);
     return;
   }
 
   // Otherwise if MFA needed, trigger MFA
   if (mfaNeeded) {
-    api.user.setAppMetadata("fp_mfaNeeded", true);
-    api.authentication.challengeWithAny([
-      { type: "otp" },
-      { type: "recovery-code" },
-      { type: "email" },
-      { type: "push-notification" },
-      { type: "phone" },
-      { type: "webauthn-platform" },
-      { type: "webauthn-roaming" },
-    ]);
+    api.user.setAppMetadata("com_fingerprint_mfaNeeded", true);
+    api.authentication.challengeWithAny(formattedEnrolledMFAs);
   }
 };

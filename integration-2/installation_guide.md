@@ -6,7 +6,7 @@ This integration enhances your Auth0 login flows with Fingerprint's visitor iden
 
 Fingerprint Identification collects over 100 attributes from a user's browser or device to generate stable visitor identifiers that remain consistent even after browser updates or cookie clearance. Fingerprint Smart Signals provide additional details, such as VPN usage, browser tampering, or bot activity. This data strengthens your Auth0 login flows by enabling the detection of suspicious behavior even when the user has the right credentials.
 
-To see a full walkthrough and breakdown of how these Action scripts work, check out our [Fingerprint + Auth0 tutorial](https://fingerprint.com/blog/iam-integration-prevent-account-takeover/).
+To see a breakdown of how these Action scripts work, or to build your own, check out our [Fingerprint + Auth0 tutorial](https://fingerprint.com/blog/iam-integration-prevent-account-takeover/).
 
 ## Prerequisites
 
@@ -24,7 +24,10 @@ To identify your visitors, add the Fingerprint device intelligence client agent 
 Here is a [React](https://github.com/fingerprintjs/fingerprintjs-pro-react) example:
 
 ```jsx
-import { FpjsProvider, useVisitorData } from "@fingerprintjs/fingerprintjs-pro-react";
+import {
+  FpjsProvider,
+  useVisitorData,
+} from "@fingerprintjs/fingerprintjs-pro-react";
 
 const App = () => (
   <FpjsProvider
@@ -66,7 +69,7 @@ Consult the Fingerprint [Quick Start Guide](https://dev.fingerprint.com/docs/qui
 
 ## 2. Send Fingerprint identification results to Auth0
 
-Modify your Auth0 implementation to send the Fingerprint identification results as additional *authorization parameters*.
+Modify your Auth0 implementation to send the Fingerprint identification results as additional _authorization parameters_.
 
 For most JavaScript-based Auth0 SDKs, you can pass the `requestId` and `visitorId` as custom `authorizationParams` into the `loginWithRedirect` function. Here is an example using the [Auth0 React SDK](https://auth0.com/docs/libraries/auth0-react):
 
@@ -139,21 +142,31 @@ Your implementation details will vary depending on how you integrate Auth0 with 
 
 We recommend using the Fingerprint integration with the New Universal Login as it's server-side rendered. Using it with the Classic Universal Login will result in the additional parameters being visible to the end user.
 
-## Add the Auth0 Actions
+## 3. Set up Auth0 MFA
+
+In order to prompt for MFA, you will first need to enable it in your Auth0 application.
+
+1. In the Auth0 dashboard, navigate to **Security** on the left-hand menu, then select **Multi-factor Auth**.
+1. If you do not already have an MFA option enabled, choose one of the available MFA options and enable it.
+1. Set the **Require Multi-factor Auth** policy to **Never**, allowing the Actions to decide when to require MFA.
+1. Toggle [**Customize MFA Factors using Actions**](https://auth0.com/docs/secure/multi-factor-authentication/customize-mfa/customize-mfa-selection-universal-login) **on** to enable MFA verification logic in the Actions.
+
+## 4. Add the Fingerprint Actions
 
 **Note:** Once both Actions are successfully deployed, all logins for your tenant will be processed by these integrations. Before activating the integrations in production, [install and verify the Actions on a test tenant](https://auth0.com/docs/get-started/auth0-overview/create-tenants/set-up-multiple-environments).
 
 1. Select **Add Integration** (at the top of this page).
 1. Read the necessary access requirements, and select **Continue**.
 1. Configure the integration using the following fields:
-   * FINGERPRINT_SECRET_API_KEY: Enter your secret Fingerprint Server API key, which is used for server-to-server requests. This key can be generated in the **[Fingerprint Dashboard](https://dashboard.fingerprint.com/api-keys)**.
-   * REGION: Select the region where your Fingerprint application stores data; options include Global (US), EU, or Asia, with a default of US.
-   * IDENTIFICATION_ERROR: Choose how to handle missing or spoofed request IDs; options include blocking the login, triggering MFA (default), or allowing login (not recommended).
-   * UNRECOGNIZED_VISITORID: Define the behavior for logins from new devices with unrecognized visitor IDs, either by triggering MFA (default) or allowing login.
-   * MAX_SUSPECT_SCORE: Set a threshold for triggering MFA based on the Suspect Score. Set to -1 to disable this feature.
-   * BOT_DETECTION: Decide how to handle logins from detected bots, with options to block login (default), trigger MFA, or allow login.
-   * VPN_DETECTION: Configure how VPN usage is handled, with options to allow login (default), trigger MFA, or block login.
-   * DENIED_MESSAGE: Provide a generic error message for denied logins.
+   - FINGERPRINT_SECRET_API_KEY: Enter your secret Fingerprint Server API key, which is used for server-to-server requests. This key can be generated in the **[Fingerprint Dashboard](https://dashboard.fingerprint.com/api-keys)**.
+   - REGION: Select the region where your Fingerprint application stores data; options include Global (US), EU, or Asia, with a default of US.
+   - IDENTIFICATION_ERROR: Choose how to handle missing or spoofed request IDs; options include blocking the login, triggering MFA (default), or allowing login (not recommended).
+   - UNRECOGNIZED_VISITORID: Define the behavior for logins from new devices with unrecognized visitor IDs, either by triggering MFA (default) or allowing login.
+   - MAX_SUSPECT_SCORE: Set a threshold for triggering MFA based on the Suspect Score. Set to -1 to disable this feature.
+   - BOT_DETECTION: Decide how to handle logins from detected bots, with options to block login (default), trigger MFA, or allow login.
+   - VPN_DETECTION: Configure how VPN usage is handled, with options to allow login (default), trigger MFA, or block login.
+   - DENIED_MESSAGE: Provide a generic error message for denied logins.
+   - AVAILABLE_MFA: Enter a comma-separated list of MFA methods that are enabled for enrollment. (Ex: otp,push-notification) Refer to [Auth0 documentation](https://auth0.com/docs/customize/actions/explore-triggers/signup-and-login-triggers/login-trigger/post-login-event-object) for a list of available MFA method values.
 1. Add the integration to your Library by selecting **Create**.
 1. In the modal that appears, select the **Add to flow** link.
 1. Drag the Action into the desired location in the flow.
@@ -162,8 +175,8 @@ We recommend using the Fingerprint integration with the New Universal Login as i
 1. Select **Add Integration** (at the top of this page).
 1. Read the necessary access requirements, and select **Continue**.
 1. Configure the integration using the following fields:
-   * DENIED_MESSAGE: Provide a generic error message for denied logins.
-   * EXPOSE_VISITOR_IDS: Determine whether the list of visitor IDs should be included as a custom claim in the ID token.
+   - DENIED_MESSAGE: Provide a generic error message for denied logins.
+   - EXPOSE_VISITOR_IDS: Determine whether the list of visitor IDs should be included as a custom claim in the ID token.
 1. Add the integration to your Library by selecting **Create**.
 1. In the modal that appears, select the **Add to flow** link.
 1. Drag the Action **directly after** the first Fingerprint action in the flow.
@@ -171,7 +184,7 @@ We recommend using the Fingerprint integration with the New Universal Login as i
 
 ## Results
 
-Once the Actions are configured and deployed, they integrate Fingerprint device recognition and risk-based security checks into your login flow, adapting to the configuration options you've set. During the login process, the Actions validate the identification result against the Fingerprint Server API. If the identification result is invalid, missing, or fails to match the identification event, the Actions will follow the behavior defined in the `IDENTIFICATION_ERROR` option (e.g., block login, trigger MFA, or allow login). You must have at least one form of MFA enabled.
+Once the Actions are configured and deployed, they integrate Fingerprint device recognition and risk-based security checks into your login flow, adapting to the configuration options you've set. During the login process, the Actions validate the identification result against the Fingerprint Server API. If the identification result is invalid, missing, or fails to match the identification event, the Actions will follow the behavior defined in the `IDENTIFICATION_ERROR` option (e.g., block login, trigger MFA, or allow login). **You must have at least one form of MFA enabled**. If MFA is triggered or the user does not have MFA set up yet, the list of options entered in `AVAILABLE_MFA` will be presented to enroll or complete.
 
 The login flow also enforces the settings for handling new or unrecognized devices. If a visitor ID is not associated with the user's account, the Actions will either trigger MFA or allow the login, based on your `UNRECOGNIZED_VISITORID` configuration. Similarly, bot activity and VPN usage are monitored and managed per the `BOT_DETECTION` and `VPN_DETECTION` options, respectively. For instance, you can choose to block logins, prompt for MFA, or allow access under these conditions.
 
@@ -179,7 +192,7 @@ Additionally, the `MAX_SUSPECT_SCORE` threshold, if enabled, helps detect suspic
 
 Logins that are denied for any reason will display the `DENIED_MESSAGE`, which can be customized to avoid exposing specific denial reasons.
 
-After processing, the Actions store the visitor ID in a list of recognized visitor IDs in the user's app metadata. This allows the Actions to retrieve and verify the user's trusted devices during future logins. The visitor ID is only added to the list upon successful completion of all configured security checks, including MFA if required. If you enable the `EXPOSE_VISITOR_IDS` option to expose visitor IDs as a custom claim, a `https://fingerprint.com/visitorIds` claim will be included in the ID token and accessible from your app.
+After processing, the Actions store the visitor ID in a list of recognized visitor IDs in the user's app metadata. This allows the Actions to retrieve and verify the user's trusted devices during future logins. The visitor ID is only added to the list upon successful completion of all configured security checks, including MFA if required. If you enable the `EXPOSE_VISITOR_IDS` option to expose visitor IDs as a custom claim, the `https://fingerprint.com/visitorIds` claim will be included in the ID token and accessible from your app.
 
 ## Troubleshooting
 

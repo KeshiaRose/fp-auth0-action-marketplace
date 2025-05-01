@@ -3,66 +3,68 @@ const { apiMock } = require("../__mocks__/api-post-login");
 
 // Mock the Fingerprint library
 jest.mock("@fingerprintjs/fingerprintjs-pro-server-api", () => ({
-  FingerprintJsServerApiClient: jest.fn().mockImplementation(({ region, apiKey }) => ({
-    getEvent: jest.fn().mockImplementation((requestId) => {
-      if (apiKey !== "validApiKey") {
-        return Promise.reject(new Error("Invalid API key"));
-      }
+  FingerprintJsServerApiClient: jest
+    .fn()
+    .mockImplementation(({ region, apiKey }) => ({
+      getEvent: jest.fn().mockImplementation((requestId) => {
+        if (apiKey !== "validApiKey") {
+          return Promise.reject(new Error("Invalid API key"));
+        }
 
-      if (!["Global", "EU", "AP"].includes(region)) {
-        return Promise.reject(new Error("Invalid region"));
-      }
+        if (!["Global", "EU", "AP"].includes(region)) {
+          return Promise.reject(new Error("Invalid region"));
+        }
 
-      if (requestId === "validRequestId") {
-        return Promise.resolve({
-          products: {
-            identification: {
-              data: { visitorId: "visitor123", suspect: { score: 5 } },
+        if (requestId === "validRequestId") {
+          return Promise.resolve({
+            products: {
+              identification: {
+                data: { visitorId: "visitor123", suspect: { score: 5 } },
+              },
+              botd: { data: { bot: { result: "notDetected" } } },
+              vpn: { data: { result: false } },
             },
-            botd: { data: { bot: { result: "notDetected" } } },
-            vpn: { data: { result: false } },
-          },
-        });
-      }
-      if (requestId === "invalidRequestId") {
-        return Promise.reject(new Error("Invalid request ID"));
-      }
-      if (requestId === "validRequestIdBot") {
-        return Promise.resolve({
-          products: {
-            identification: {
-              data: { visitorId: "visitor123", suspect: { score: 5 } },
+          });
+        }
+        if (requestId === "invalidRequestId") {
+          return Promise.reject(new Error("Invalid request ID"));
+        }
+        if (requestId === "validRequestIdBot") {
+          return Promise.resolve({
+            products: {
+              identification: {
+                data: { visitorId: "visitor123", suspect: { score: 5 } },
+              },
+              botd: { data: { bot: { result: "good" } } },
+              vpn: { data: { result: false } },
             },
-            botd: { data: { bot: { result: "good" } } },
-            vpn: { data: { result: false } },
-          },
-        });
-      }
-      if (requestId === "validRequestIdVpn") {
-        return Promise.resolve({
-          products: {
-            identification: {
-              data: { visitorId: "visitor123", suspect: { score: 5 } },
+          });
+        }
+        if (requestId === "validRequestIdVpn") {
+          return Promise.resolve({
+            products: {
+              identification: {
+                data: { visitorId: "visitor123", suspect: { score: 5 } },
+              },
+              botd: { data: { bot: { result: "notDetected" } } },
+              vpn: { data: { result: true } },
             },
-            botd: { data: { bot: { result: "notDetected" } } },
-            vpn: { data: { result: true } },
-          },
-        });
-      }
-      if (requestId === "validRequestIdSuspect") {
-        return Promise.resolve({
-          products: {
-            identification: {
-              data: { visitorId: "visitor123", suspect: { score: 20 } },
+          });
+        }
+        if (requestId === "validRequestIdSuspect") {
+          return Promise.resolve({
+            products: {
+              identification: {
+                data: { visitorId: "visitor123", suspect: { score: 20 } },
+              },
+              botd: { data: { bot: { result: "notDetected" } } },
+              vpn: { data: { result: false } },
             },
-            botd: { data: { bot: { result: "notDetected" } } },
-            vpn: { data: { result: false } },
-          },
-        });
-      }
-      return Promise.reject(new Error("Unexpected error"));
-    }),
-  })),
+          });
+        }
+        return Promise.reject(new Error("Unexpected error"));
+      }),
+    })),
   Region: { Global: "Global", EU: "EU", AP: "AP" },
   RequestError: class RequestError extends Error {
     constructor(message) {
@@ -100,13 +102,14 @@ describe("Action integration", () => {
       BOT_DETECTION: "block_login",
       VPN_DETECTION: "allow_login",
       DENIED_MESSAGE: "Error logging in.",
+      AVAILABLE_MFA: "otp,push-notification",
     };
 
     // Default api key
     eventMock.secrets.FINGERPRINT_SECRET_API_KEY = "validApiKey";
 
     // Assume user is enrolled in MFA by default
-    eventMock.user.multifactor = [{ type: "mfa" }];
+    eventMock.user.enrolledFactors = [{ type: "otp" }];
   });
 
   afterEach(() => {
@@ -133,7 +136,10 @@ describe("Action integration", () => {
 
         await onExecutePostLogin(eventMock, apiMock);
         expect(apiMock.access.deny).not.toHaveBeenCalledWith();
-        expect(apiMock.user.setAppMetadata).not.toHaveBeenCalledWith("fp_skip", true);
+        expect(apiMock.user.setAppMetadata).not.toHaveBeenCalledWith(
+          "com_fingerprint_skip",
+          true
+        );
       });
     });
 
@@ -143,8 +149,13 @@ describe("Action integration", () => {
         eventMock.configuration.IDENTIFICATION_ERROR = "block_login";
 
         await onExecutePostLogin(eventMock, apiMock);
-        expect(apiMock.access.deny).toHaveBeenCalledWith(eventMock.configuration.DENIED_MESSAGE);
-        expect(apiMock.user.setAppMetadata).toHaveBeenCalledWith("fp_skip", true);
+        expect(apiMock.access.deny).toHaveBeenCalledWith(
+          eventMock.configuration.DENIED_MESSAGE
+        );
+        expect(apiMock.user.setAppMetadata).toHaveBeenCalledWith(
+          "com_fingerprint_skip",
+          true
+        );
       });
 
       it("allows login if requestId is missing and IDENTIFICATION_ERROR is 'allow_login'", async () => {
@@ -153,7 +164,10 @@ describe("Action integration", () => {
 
         await onExecutePostLogin(eventMock, apiMock);
         expect(apiMock.access.deny).not.toHaveBeenCalled();
-        expect(apiMock.user.setAppMetadata).toHaveBeenCalledWith("fp_skip", true);
+        expect(apiMock.user.setAppMetadata).toHaveBeenCalledWith(
+          "com_fingerprint_skip",
+          true
+        );
       });
 
       it("denies login if requestId is invalid and IDENTIFICATION_ERROR is 'block_login'", async () => {
@@ -161,8 +175,13 @@ describe("Action integration", () => {
         eventMock.configuration.IDENTIFICATION_ERROR = "block_login";
 
         await onExecutePostLogin(eventMock, apiMock);
-        expect(apiMock.access.deny).toHaveBeenCalledWith(eventMock.configuration.DENIED_MESSAGE);
-        expect(apiMock.user.setAppMetadata).toHaveBeenCalledWith("fp_skip", true);
+        expect(apiMock.access.deny).toHaveBeenCalledWith(
+          eventMock.configuration.DENIED_MESSAGE
+        );
+        expect(apiMock.user.setAppMetadata).toHaveBeenCalledWith(
+          "com_fingerprint_skip",
+          true
+        );
       });
 
       it("allows login if requestId is invalid and IDENTIFICATION_ERROR is 'allow_login'", async () => {
@@ -171,7 +190,10 @@ describe("Action integration", () => {
 
         await onExecutePostLogin(eventMock, apiMock);
         expect(apiMock.access.deny).not.toHaveBeenCalled();
-        expect(apiMock.user.setAppMetadata).toHaveBeenCalledWith("fp_skip", true);
+        expect(apiMock.user.setAppMetadata).toHaveBeenCalledWith(
+          "com_fingerprint_skip",
+          true
+        );
       });
 
       it("skips Fingerprint checks if invalid API key and IDENTIFICATION_ERROR is 'allow_login'", async () => {
@@ -180,7 +202,10 @@ describe("Action integration", () => {
 
         await onExecutePostLogin(eventMock, apiMock);
         expect(apiMock.access.deny).not.toHaveBeenCalled();
-        expect(apiMock.user.setAppMetadata).toHaveBeenCalledWith("fp_skip", true);
+        expect(apiMock.user.setAppMetadata).toHaveBeenCalledWith(
+          "com_fingerprint_skip",
+          true
+        );
       });
 
       it("denies login if invalid API key and IDENTIFICATION_ERROR is 'block_login'", async () => {
@@ -198,7 +223,9 @@ describe("Action integration", () => {
         eventMock.configuration.BOT_DETECTION = "block_login";
 
         await onExecutePostLogin(eventMock, apiMock);
-        expect(apiMock.access.deny).toHaveBeenCalledWith(eventMock.configuration.DENIED_MESSAGE);
+        expect(apiMock.access.deny).toHaveBeenCalledWith(
+          eventMock.configuration.DENIED_MESSAGE
+        );
       });
 
       it("triggers MFA for detected bot when BOT_DETECTION is 'trigger_mfa'", async () => {
@@ -207,10 +234,16 @@ describe("Action integration", () => {
 
         await onExecutePostLogin(eventMock, apiMock);
         expect(apiMock.access.deny).not.toHaveBeenCalled();
-        expect(apiMock.authentication.challengeWithAny).toHaveBeenCalled();
-        expect(apiMock.user.setAppMetadata).toHaveBeenCalledWith("fp_mfaNeeded", true);
+        expect(
+          apiMock.authentication.challengeWithAny.mock.calls.length > 0 ||
+            apiMock.authentication.enrollWithAny.mock.calls.length > 0
+        ).toBe(true);
         expect(apiMock.user.setAppMetadata).toHaveBeenCalledWith(
-          "fp_currentVisitorId",
+          "com_fingerprint_mfaNeeded",
+          true
+        );
+        expect(apiMock.user.setAppMetadata).toHaveBeenCalledWith(
+          "com_fingerprint_currentVisitorId",
           "visitor123"
         );
       });
@@ -222,7 +255,7 @@ describe("Action integration", () => {
         await onExecutePostLogin(eventMock, apiMock);
         expect(apiMock.access.deny).not.toHaveBeenCalled();
         expect(apiMock.user.setAppMetadata).toHaveBeenCalledWith(
-          "fp_currentVisitorId",
+          "com_fingerprint_currentVisitorId",
           "visitor123"
         );
       });
@@ -234,7 +267,9 @@ describe("Action integration", () => {
         eventMock.configuration.VPN_DETECTION = "block_login";
 
         await onExecutePostLogin(eventMock, apiMock);
-        expect(apiMock.access.deny).toHaveBeenCalledWith(eventMock.configuration.DENIED_MESSAGE);
+        expect(apiMock.access.deny).toHaveBeenCalledWith(
+          eventMock.configuration.DENIED_MESSAGE
+        );
       });
 
       it("triggers MFA for detected VPN when VPN_DETECTION is 'trigger_mfa'", async () => {
@@ -243,10 +278,16 @@ describe("Action integration", () => {
 
         await onExecutePostLogin(eventMock, apiMock);
         expect(apiMock.access.deny).not.toHaveBeenCalled();
-        expect(apiMock.authentication.challengeWithAny).toHaveBeenCalled();
-        expect(apiMock.user.setAppMetadata).toHaveBeenCalledWith("fp_mfaNeeded", true);
+        expect(
+          apiMock.authentication.challengeWithAny.mock.calls.length > 0 ||
+            apiMock.authentication.enrollWithAny.mock.calls.length > 0
+        ).toBe(true);
         expect(apiMock.user.setAppMetadata).toHaveBeenCalledWith(
-          "fp_currentVisitorId",
+          "com_fingerprint_mfaNeeded",
+          true
+        );
+        expect(apiMock.user.setAppMetadata).toHaveBeenCalledWith(
+          "com_fingerprint_currentVisitorId",
           "visitor123"
         );
       });
@@ -258,7 +299,7 @@ describe("Action integration", () => {
         await onExecutePostLogin(eventMock, apiMock);
         expect(apiMock.access.deny).not.toHaveBeenCalled();
         expect(apiMock.user.setAppMetadata).toHaveBeenCalledWith(
-          "fp_currentVisitorId",
+          "com_fingerprint_currentVisitorId",
           "visitor123"
         );
       });
@@ -271,28 +312,48 @@ describe("Action integration", () => {
 
         await onExecutePostLogin(eventMock, apiMock);
         expect(apiMock.access.deny).not.toHaveBeenCalled();
-        expect(apiMock.authentication.challengeWithAny).toHaveBeenCalled();
-        expect(apiMock.user.setAppMetadata).toHaveBeenCalledWith("fp_mfaNeeded", true);
+        expect(
+          apiMock.authentication.challengeWithAny.mock.calls.length > 0 ||
+            apiMock.authentication.enrollWithAny.mock.calls.length > 0
+        ).toBe(true);
+        expect(apiMock.user.setAppMetadata).toHaveBeenCalledWith(
+          "com_fingerprint_mfaNeeded",
+          true
+        );
       });
 
       it("doesn't trigger MFA if MAX_SUSPECT_SCORE is -1", async () => {
         eventMock.request.query = { requestId: "validRequestIdSuspect" };
         eventMock.configuration.MAX_SUSPECT_SCORE = "-1";
-        eventMock.user.app_metadata = { fp_visitorIds: ["visitor123"] };
+        eventMock.user.app_metadata = {
+          com_fingerprint_visitorIds: ["visitor123"],
+        };
+        eventMock.user.enrolledFactors = [{ type: "otp" }];
 
         await onExecutePostLogin(eventMock, apiMock);
         expect(apiMock.access.deny).not.toHaveBeenCalled();
-        expect(apiMock.authentication.challengeWithAny).not.toHaveBeenCalled();
-        expect(apiMock.user.setAppMetadata).not.toHaveBeenCalledWith("fp_mfaNeeded", true);
+        expect(
+          apiMock.authentication.challengeWithAny.mock.calls.length > 0 ||
+            apiMock.authentication.enrollWithAny.mock.calls.length > 0
+        ).toBe(false);
+        expect(apiMock.user.setAppMetadata).not.toHaveBeenCalledWith(
+          "com_fingerprint_mfaNeeded",
+          true
+        );
       });
 
       it("triggers MFA if visitorId is recognized but MAX_SUSPECT_SCORE is exceeded", async () => {
         eventMock.request.query = { requestId: "validRequestIdSuspect" };
         eventMock.configuration.MAX_SUSPECT_SCORE = "15";
-        eventMock.user.app_metadata = { fp_visitorIds: ["visitor123"] };
+        eventMock.user.app_metadata = {
+          com_fingerprint_visitorIds: ["visitor123"],
+        };
 
         await onExecutePostLogin(eventMock, apiMock);
-        expect(apiMock.authentication.challengeWithAny).toHaveBeenCalled();
+        expect(
+          apiMock.authentication.challengeWithAny.mock.calls.length > 0 ||
+            apiMock.authentication.enrollWithAny.mock.calls.length > 0
+        ).toBe(true);
       });
     });
 
@@ -302,10 +363,16 @@ describe("Action integration", () => {
 
         await onExecutePostLogin(eventMock, apiMock);
         expect(apiMock.access.deny).not.toHaveBeenCalled();
-        expect(apiMock.authentication.challengeWithAny).toHaveBeenCalled();
-        expect(apiMock.user.setAppMetadata).toHaveBeenCalledWith("fp_mfaNeeded", true);
+        expect(
+          apiMock.authentication.challengeWithAny.mock.calls.length > 0 ||
+            apiMock.authentication.enrollWithAny.mock.calls.length > 0
+        ).toBe(true);
         expect(apiMock.user.setAppMetadata).toHaveBeenCalledWith(
-          "fp_currentVisitorId",
+          "com_fingerprint_mfaNeeded",
+          true
+        );
+        expect(apiMock.user.setAppMetadata).toHaveBeenCalledWith(
+          "com_fingerprint_currentVisitorId",
           "visitor123"
         );
       });
@@ -316,7 +383,7 @@ describe("Action integration", () => {
         await onExecutePostLogin(eventMock, apiMock);
         expect(apiMock.access.deny).not.toHaveBeenCalled();
         expect(apiMock.user.setAppMetadata).toHaveBeenCalledWith(
-          "fp_currentVisitorId",
+          "com_fingerprint_currentVisitorId",
           "visitor123"
         );
       });
@@ -325,7 +392,9 @@ describe("Action integration", () => {
     describe("Recognized visitor", () => {
       it("allows login without MFA if visitorId is recognized", async () => {
         eventMock.configuration.UNRECOGNIZED_VISITORID = "allow_login";
-        eventMock.user.app_metadata = { fp_visitorIds: ["visitor123"] };
+        eventMock.user.app_metadata = {
+          com_fingerprint_visitorIds: ["visitor123"],
+        };
 
         await onExecutePostLogin(eventMock, apiMock);
         expect(apiMock.access.deny).not.toHaveBeenCalled();
@@ -335,10 +404,68 @@ describe("Action integration", () => {
 
     describe("Not enrolled in MFA", () => {
       it("enrolls MFA when passes all checks but no MFA is enrolled", async () => {
-        eventMock.user.multifactor = [];
+        eventMock.user.enrolledFactors = [];
 
         await onExecutePostLogin(eventMock, apiMock);
         expect(apiMock.authentication.enrollWithAny).toHaveBeenCalled();
+        expect(apiMock.user.setAppMetadata).toHaveBeenCalledWith(
+          "com_fingerprint_mfaNeeded",
+          true
+        );
+      });
+    });
+
+    describe("AVAILABLE_MFA configuration", () => {
+      beforeEach(() => {
+        eventMock.user.enrolledFactors = [];
+      });
+
+      it("enrolls user with specified MFA methods when AVAILABLE_MFA is provided", async () => {
+        eventMock.configuration.AVAILABLE_MFA = "otp,push-notification";
+
+        await onExecutePostLogin(eventMock, apiMock);
+        expect(apiMock.authentication.enrollWithAny).toHaveBeenCalledWith([
+          { type: "otp" },
+          { type: "push-notification" },
+        ]);
+      });
+
+      it("doesn't enroll user if user is already enrolled in MFA", async () => {
+        eventMock.user.enrolledFactors = [{ type: "otp" }];
+
+        await onExecutePostLogin(eventMock, apiMock);
+        expect(apiMock.authentication.enrollWithAny).not.toHaveBeenCalled();
+      });
+
+      it("handles single MFA method correctly", async () => {
+        eventMock.configuration.AVAILABLE_MFA = "otp";
+
+        await onExecutePostLogin(eventMock, apiMock);
+        expect(apiMock.authentication.enrollWithAny).toHaveBeenCalledWith([
+          { type: "otp" },
+        ]);
+      });
+
+      it("handles empty AVAILABLE_MFA configuration by following the IDENTIFICATION_ERROR configuration", async () => {
+        eventMock.configuration.AVAILABLE_MFA = "";
+        eventMock.configuration.IDENTIFICATION_ERROR = "block_login";
+
+        await onExecutePostLogin(eventMock, apiMock);
+        expect(apiMock.authentication.enrollWithAny).not.toHaveBeenCalled();
+        expect(apiMock.user.setAppMetadata).toHaveBeenCalledWith(
+          "com_fingerprint_skip",
+          true
+        );
+      });
+
+      it("handles whitespace in AVAILABLE_MFA configuration", async () => {
+        eventMock.configuration.AVAILABLE_MFA = "  otp  ,  push-notification  ";
+
+        await onExecutePostLogin(eventMock, apiMock);
+        expect(apiMock.authentication.enrollWithAny).toHaveBeenCalledWith([
+          { type: "otp" },
+          { type: "push-notification" },
+        ]);
       });
     });
   });
