@@ -8,7 +8,7 @@ on:
 
 jobs:
   build:
-    name: Test Integration
+    name: Test Integrations
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2
@@ -23,5 +23,7 @@ jobs:
             ${{ runner.os }}-build-${{ env.cache-name }}-
             ${{ runner.os }}-build-
             ${{ runner.os }}-
-      - name: Run integration tests
-        run: docker run -v $(pwd)/integration/:/data/integration/ auth0/marketplace-integration-tools npm run test:action
+      - name: Run integration 1 tests
+        run: docker run -v $(pwd)/integration-1/:/data/integration/ auth0/marketplace-integration-tools npm run test:action
+      - name: Run integration 2 tests
+        run: docker run -v $(pwd)/integration-2/:/data/integration/ auth0/marketplace-integration-tools npm run test:action
