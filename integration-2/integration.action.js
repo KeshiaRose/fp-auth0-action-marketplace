@@ -8,10 +8,7 @@ exports.onExecutePostLogin = async (event, api) => {
   const { DENIED_MESSAGE, EXPOSE_VISITOR_IDS } = event.configuration;
 
   const VALID_DENIED_MESSAGE = DENIED_MESSAGE || "Error logging in.";
-  const VALID_EXPOSE_VISITOR_IDS =
-    (["true", "false"].includes(EXPOSE_VISITOR_IDS)
-      ? EXPOSE_VISITOR_IDS
-      : "false") === "true";
+  const VALID_EXPOSE_VISITOR_IDS = EXPOSE_VISITOR_IDS === "true";
 
   // Get variables from the first Action
   const appMetadata = event.user.app_metadata || {};
@@ -51,9 +48,6 @@ exports.onExecutePostLogin = async (event, api) => {
 
   // Optional: Set the visitorId list as a custom claim so it can be accessed from the app
   if (VALID_EXPOSE_VISITOR_IDS) {
-    api.idToken.setCustomClaim(
-      "https://fingerprint.com/visitorIds",
-      updatedVisitorIds
-    );
+    api.idToken.setCustomClaim("https://fingerprint.com/visitorIds", updatedVisitorIds);
   }
 };

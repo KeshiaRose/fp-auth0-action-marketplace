@@ -1,6 +1,6 @@
 const {
   FingerprintJsServerApiClient,
-  Region,
+  Region: RegionEnum,
   RequestError,
 } = require("@fingerprintjs/fingerprintjs-pro-server-api");
 
@@ -26,61 +26,73 @@ exports.onExecutePostLogin = async (event, api) => {
 
   // Helper function to validate configuration values
   function validateConfig(value, allowedValues, defaultValue) {
-    return allowedValues.includes(value) ? value : defaultValue;
+    const validValue = allowedValues.includes(value) ? value : defaultValue;
+    if (validValue !== value) {
+      console.warn(
+        `Invalid configuration value: ${value}. Allowed values: ${allowedValues.join(
+          ", "
+        )}. Defaulting to: ${validValue}.`
+      );
+    }
+    return validValue;
   }
+
+  const ALLOW_LOGIN = "allow_login";
+  const BLOCK_LOGIN = "block_login";
+  const TRIGGER_MFA = "trigger_mfa";
 
   // Validate configurations
   const VALID_DENIED_MESSAGE = DENIED_MESSAGE || "Error logging in.";
   const VALID_IDENTIFICATION_ERROR = validateConfig(
     IDENTIFICATION_ERROR,
-    ["block_login", "allow_login"],
-    "block_login"
+    [BLOCK_LOGIN, ALLOW_LOGIN],
+    BLOCK_LOGIN
   );
-  const VALID_REGION = validateConfig(REGION, ["Global", "EU", "AP"], "Global");
+  const VALID_REGION = validateConfig(REGION, Object.values(RegionEnum), RegionEnum.Global);
   const VALID_UNRECOGNIZED_VISITORID = validateConfig(
     UNRECOGNIZED_VISITORID,
-    ["trigger_mfa", "allow_login"],
-    "trigger_mfa"
+    [TRIGGER_MFA, ALLOW_LOGIN],
+    TRIGGER_MFA
   );
   const VALID_BOT_DETECTION = validateConfig(
     BOT_DETECTION,
-    ["block_login", "trigger_mfa", "allow_login"],
-    "block_login"
+    [BLOCK_LOGIN, TRIGGER_MFA, ALLOW_LOGIN],
+    BLOCK_LOGIN
   );
   const VALID_VPN_DETECTION = validateConfig(
     VPN_DETECTION,
-    ["block_login", "trigger_mfa", "allow_login"],
-    "allow_login"
+    [BLOCK_LOGIN, TRIGGER_MFA, ALLOW_LOGIN],
+    ALLOW_LOGIN
   );
-  const VALID_MAX_SUSPECT_SCORE =
-    MAX_SUSPECT_SCORE === "-1" ? -1 : parseInt(MAX_SUSPECT_SCORE, 10) || -1;
+  let VALID_MAX_SUSPECT_SCORE = parseInt(MAX_SUSPECT_SCORE, 10);
+  if (Number.isNaN(VALID_MAX_SUSPECT_SCORE)) {
+    VALID_MAX_SUSPECT_SCORE = -1;
+  }
 
   // Helper function to handle Action errors
   function handleActionError(msg) {
-    console.log(msg);
+    console.error(msg);
     api.user.setAppMetadata("com_fingerprint_skip", true);
-    if (VALID_IDENTIFICATION_ERROR === "block_login") {
+    if (VALID_IDENTIFICATION_ERROR === BLOCK_LOGIN) {
       return api.access.deny(VALID_DENIED_MESSAGE);
     }
     // Continue login if set to 'allow_login'
     return null;
   }
 
-  let VALID_AVAILABLE_MFA;
-  try {
-    const splitList = AVAILABLE_MFA.replace(/ /g, "")
-      .split(",")
-      .filter((mfa) => mfa !== "");
-    if (splitList.length === 0) throw new Error();
-    VALID_AVAILABLE_MFA = splitList.map((mfa) => ({ type: mfa }));
-  } catch (error) {
-    handleActionError("Invalid MFA configuration.");
+  if (typeof AVAILABLE_MFA !== "string") {
+    handleActionError("Invalid MFA Configuration.");
     return;
   }
+  const VALID_AVAILABLE_MFA = AVAILABLE_MFA.replace(/ /g, "")
+    .split(",")
+    .filter((mfa) => mfa !== "")
+    .map((mfa) => ({ type: mfa }));
   if (VALID_AVAILABLE_MFA.length === 0) {
     handleActionError("No MFA methods configured.");
     return;
   }
+
   if (!FINGERPRINT_SECRET_API_KEY) {
     handleActionError("Fingerprint API key is missing.");
     return;
@@ -90,7 +102,7 @@ exports.onExecutePostLogin = async (event, api) => {
 
   // Initialize the Fingerprint Server API client
   const client = new FingerprintJsServerApiClient({
-    region: Region[VALID_REGION],
+    region: RegionEnum[VALID_REGION],
     apiKey: FINGERPRINT_SECRET_API_KEY,
   });
 
@@ -106,12 +118,13 @@ exports.onExecutePostLogin = async (event, api) => {
   try {
     identificationEvent = await client.getEvent(requestId);
   } catch (error) {
+    console.error("client.getEvent failed");
     if (error instanceof RequestError) {
-      console.log(error.responseBody); // Access parsed response body
-      console.log(error.response); // You can also access the raw response
-      console.log(`error ${error.statusCode}: `, error.message);
+      console.error("responseBody", error.responseBody);
+      console.error("response", error.response);
+      console.error(`error ${error.statusCode}: `, error.message);
     } else {
-      console.log("Unknown FP error: ", error);
+      console.error("Unknown error: ", error);
     }
     handleActionError("Fingerprint identification event not found");
     return;
@@ -128,11 +141,11 @@ exports.onExecutePostLogin = async (event, api) => {
   // Detect bot actitivity and handle accordingly
   const botDetection = identificationEvent?.products?.botd?.data?.bot?.result;
   if (botDetection !== "notDetected") {
-    if (VALID_BOT_DETECTION === "block_login") {
+    if (VALID_BOT_DETECTION === BLOCK_LOGIN) {
       api.access.deny(VALID_DENIED_MESSAGE);
       return;
     }
-    if (VALID_BOT_DETECTION === "trigger_mfa") {
+    if (VALID_BOT_DETECTION === TRIGGER_MFA) {
       mfaNeeded = true;
     }
     // Continue login if set to 'allow_login'
@@ -141,20 +154,23 @@ exports.onExecutePostLogin = async (event, api) => {
   // Detect VPN usage and handle accordingly
   const vpnDetected = identificationEvent?.products?.vpn?.data?.result;
   if (vpnDetected) {
-    if (VALID_VPN_DETECTION === "block_login") {
+    if (VALID_VPN_DETECTION === BLOCK_LOGIN) {
       api.access.deny(VALID_DENIED_MESSAGE);
       return;
     }
-    if (VALID_VPN_DETECTION === "trigger_mfa") {
+    if (VALID_VPN_DETECTION === TRIGGER_MFA) {
       mfaNeeded = true;
     }
     // Continue login if set to 'allow_login'
   }
 
-  // Check if the visitor's Suspect Score is above the threshold
-  const suspectScore = identificationEvent?.products?.identification?.data?.suspect?.score;
-  if (suspectScore > VALID_MAX_SUSPECT_SCORE && VALID_MAX_SUSPECT_SCORE >= 0) {
-    mfaNeeded = true;
+  if (VALID_MAX_SUSPECT_SCORE >= 0) {
+    // Check if the visitor's Suspect Score is above the threshold
+    const suspectScore = identificationEvent?.products?.identification?.data?.suspect?.score;
+
+    if (suspectScore > VALID_MAX_SUSPECT_SCORE) {
+      mfaNeeded = true;
+    }
   }
 
   // Check if the visitorId is recognized
@@ -163,7 +179,7 @@ exports.onExecutePostLogin = async (event, api) => {
     !appMetadata.com_fingerprint_visitorIds ||
     !appMetadata.com_fingerprint_visitorIds.includes(visitorId)
   ) {
-    if (VALID_UNRECOGNIZED_VISITORID === "trigger_mfa") {
+    if (VALID_UNRECOGNIZED_VISITORID === TRIGGER_MFA) {
       mfaNeeded = true;
     }
     // Continue login if set to 'allow_login'
@@ -172,7 +188,7 @@ exports.onExecutePostLogin = async (event, api) => {
   // If not enrolled in MFA, enroll in MFA
   const enrolledMFAs = event.user?.enrolledFactors || [];
   const formattedEnrolledMFAs = enrolledMFAs.map((mfa) => ({ type: mfa.type }));
-  if (!enrolledMFAs || enrolledMFAs.length === 0) {
+  if (!enrolledMFAs?.length) {
     api.user.setAppMetadata("com_fingerprint_mfaNeeded", true);
     api.authentication.enrollWithAny(VALID_AVAILABLE_MFA);
     return;
